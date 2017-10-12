@@ -19,10 +19,10 @@ for i = 1:n
     histogram(acc(i,:)-accMean(i),'Normalization','pdf')
     title(sprintf('acc_{%d}',i))
     subplot(3,3,2+(i-1)*3);
-    histogram(mag(i,:)-mag(i),'Normalization','pdf')
+    histogram(mag(i,:)-magMean(i),'Normalization','pdf')
     title(sprintf('mag_{%d}',i))
     subplot(3,3,3+(i-1)*3);
-    histogram(gyr(i,:)-gyr(i),'Normalization','pdf')
+    histogram(gyr(i,:)-gyrMean(i),'Normalization','pdf')
     title(sprintf('gyr_{%d}',i))
 end
 noiseParameters = struct('accMean',accMean,'accCov',cov(acc'),...

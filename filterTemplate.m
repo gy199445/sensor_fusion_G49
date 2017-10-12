@@ -75,16 +75,16 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
 
       acc = data(1, 2:4)';
       if ~any(isnan(acc))  % Acc measurements are available.
-        % Do something
+        %meas.acc(:,counter+1) = acc;
       end
       gyr = data(1, 5:7)';
       if ~any(isnan(gyr))  % Gyro measurements are available.
-        % Do something
+        %meas.gyr(:,counter+1) = gyr;
       end
 
       mag = data(1, 8:10)';
       if ~any(isnan(mag))  % Mag measurements are available.
-        % Do something
+        %meas.mag(:,counter+1) = mag;
       end
 
       orientation = data(1, 18:21)';  % Google's orientation estimate.

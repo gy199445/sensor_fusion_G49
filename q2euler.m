@@ -7,7 +7,7 @@ function euler = q2euler(q)
 
 	IN = xzpwy+sqrt(eps)>0.5;  % Handle the north pole
   euler(1, IN) = 2*atan2(q(2, IN), q(1, IN));
-  IS = xzpwy-sqrt(eps)<0.5;  % Handle the south pole
+  IS = xzpwy-sqrt(eps)<-0.5;  % Handle the south pole
   euler(1, IS) = -2*atan2(q(2, IS), q(1, IS));
 
   I = ~(IN | IS);  % Handle the default case

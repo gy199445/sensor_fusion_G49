@@ -28,6 +28,13 @@ for i = 1:n
     scatter(gyrMean(i),0,'ro')
     title(sprintf('gyr_{%d}',i))
 end
+%compute g0
+NaNRemoved = removeNaN(initData);
+counter = length(NaNRemoved.t);
+for i = 1:counter
+    g(:,i) = linsolve(transpose(Qq(NaNRemoved.orient(:,i))),NaNRemoved.acc(:,i));
+end
+g0 = mean(g,2);
 noiseParameters = struct('accMean',accMean,'accCov',cov(acc'),...
     'gyrMean',gyrMean,'gyrCov',cov(gyr'),...
-    'magMean',magMean,'magCov',cov(mag'));
+    'magMean',magMean,'magCov',cov(mag'),'g0',g0);

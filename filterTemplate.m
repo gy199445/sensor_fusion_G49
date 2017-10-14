@@ -120,7 +120,7 @@ end
 %           gyr_last_value = meas.gyr(:,counter+1);
 %       end
 %       
-%       if  abs(meas.mag(:,counter+1)) < 1.2*abs(x)                               %if outlier, no update
+%       if  abs(meas.mag(:,counter+1)) < 1.2*abs(m0)                               %if outlier, no update
 %           accOut = 1;                                                          
 %       else
 %           accOut = 0; 
@@ -128,7 +128,27 @@ end
 %       end
 %       ownView.setMagDist(accOut)
 % end
- %%     
+ %%   acc/mag fusion
+%  if ~all(isnan(meas.gyr))                                                             %filter begin when gyr data available
+%       if isnan(meas.gyr(:,counter+1))                                           %no measurement
+%         [x, P] = tu_qw_no_measure(x, P, gyr_last_value, T, Rw);                       
+%       else
+%         [x, P] = tu_qw(x, P, meas.gyr(:,counter+1), T, Rw);                       %EKF pred
+%         gyr_last_value = meas.gyr(:,counter+1);
+%       end
+%       
+%       if  abs(meas.acc(:,counter+1)) < 1.2*abs(g0) 
+%           accOut = 1;    
+%       elseif abs(meas.mag(:,counter+1)) < 1.2*abs(m0)           %if outlier, no update
+%           accOut = 1;                                                          
+%       else
+%           accOut = 0;                
+%           [x, P] = acc_mag_fusion(x, P, meas.acc(:,counter+1), meas.mag(:,counter+1), g0, m0, Ra, Rm);        % update  
+%       end
+%       ownView.setAccDist(accOut)
+% end
+
+ %%
       
       
       

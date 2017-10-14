@@ -27,7 +27,13 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
   t0 = [];  % Initial time (initialize on first data received)
   nx = 4;   % Assuming that you use q as state variable.
   % Add your filter settings here.
-
+    Rw = 1.0e-05 * [0.2013   -0.0157    0.0220; -0.0157    0.1431   -0.0049; 0.0220   -0.0049    0.1396];           %cov
+    Ra =  [0.1349   -0.0585   -0.0774; -0.0585    0.1177    0.0585; -0.0774    0.0585    0.1612];
+    Rm = [0.2283    0.1386    0.1489; 0.1386    0.1180    0.1250; 0.1489    0.1250    0.1949];
+    
+    g0 = [0;0;9.8];                                                         % g0 and m0 should be measured again when environment changes
+    m0 = [0;11.8447;-41.0179];                                                                        
+    T = 1/100;
   % Current filter state.
   x = [1; 0; 0 ;0];
   P = eye(nx, nx);
@@ -75,23 +81,60 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
 
       acc = data(1, 2:4)';
       if ~any(isnan(acc))  % Acc measurements are available.
-        %meas.acc(:,counter+1) = acc;
+        meas.acc(:,counter+1) = acc;
       end
       gyr = data(1, 5:7)';
       if ~any(isnan(gyr))  % Gyro measurements are available.
-        %meas.gyr(:,counter+1) = gyr;
+        meas.gyr(:,counter+1) = gyr;
       end
 
       mag = data(1, 8:10)';
       if ~any(isnan(mag))  % Mag measurements are available.
-        %meas.mag(:,counter+1) = mag;
+        meas.mag(:,counter+1) = mag;
       end
-
+%%  acc
+if ~all(isnan(meas.gyr))                                                             %filter begin when gyr data available
+      if isnan(meas.gyr(:,counter+1))                                           %no measurement
+        [x, P] = tu_qw_no_measure(x, P, meas.gyr, T, Rw);                       
+      else
+        [x, P] = tu_qw(x, P, meas.gyr(:,counter+1), T, Rw);                       %EKF pred
+      end
+      
+      if  abs(meas.acc(:,counter+1)) < [0.5 0.5 10]                             %if outlier, no update
+          accOut = 1;                                                          
+      else
+          accOut = 0;
+          [x, P] = mu_g(x, P, meas.acc(:,counter+1), Ra, g0);                    % update    
+      end
+      ownView.setAccDist(accOut)
+end
+%%   mag  
+% if ~all(isnan(meas.gyr)) 
+%       if isnan(meas.gyr(:,counter+1))                                           %no measurement
+%         [x, P] = tu_qw_no_measure(x, P, meas.gyr, T, Rw);
+%       else
+%         [x, P] = tu_qw(x, P, meas.gyr(:,counter+1), T, Rw);                       %EKF pred
+%       end
+%       
+%       if  abs(meas.mag(:,counter+1)) < 1.2*abs(x)                               %if outlier, no update
+%           accOut = 1;                                                          
+%       else
+%           accOut = 0; 
+%         [x, P] = mu_g(x, P, meas.mag(:,counter+1), Rm, m0);                     %update
+%       end
+%       ownView.setMagDist(accOut)
+% end
+ %%     
+      
+      
+      
       orientation = data(1, 18:21)';  % Google's orientation estimate.
 
       % Visualize result
+      
       if rem(counter, 10) == 0
         setOrientation(ownView, x(1:4));
+        ownView.setAccDist(accOut)                                            
         title(ownView, 'OWN', 'FontSize', 16);
         if ~any(isnan(orientation))
           if isempty(googleView)

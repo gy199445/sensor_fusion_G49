@@ -81,7 +81,7 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
       if ~any(isnan(gyr))  % Gyro measurements are available.
         %process noise
         Rw = (0.5*Sq(x)) * noiseParameters.gyrCov*(0.5*Sq(x))';
-        [xPredict,PPredict] = tu_qw(xPrior,PPrior,gyr,T,Rw);
+        [xPredict,PPredict] = tu_qw(x,P,gyr,T,Rw);
       end
 
       mag = data(1, 8:10)';

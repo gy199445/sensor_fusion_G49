@@ -34,6 +34,7 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
     g0 = [ -0.0019;0.0003;9.6847];                                                         % g0 and m0 should be measured again when environment changes
     m0 = [0;11.8447;-41.0179];                                                                        
     T = 1/100;
+    gyr_last_value = zeros(3,1);
   % Current filter state.
   x = [1; 0; 0 ;0];
   P = eye(nx, nx);
@@ -93,11 +94,13 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
         meas.mag(:,counter+1) = mag;
       end
 %%  acc
+
 if ~all(isnan(meas.gyr))                                                             %filter begin when gyr data available
       if isnan(meas.gyr(:,counter+1))                                           %no measurement
-        [x, P] = tu_qw_no_measure(x, P, meas.gyr, T, Rw);                       
+        [x, P] = tu_qw_no_measure(x, P, gyr_last_value, T, Rw);                       
       else
         [x, P] = tu_qw(x, P, meas.gyr(:,counter+1), T, Rw);                       %EKF pred
+        gyr_last_value = meas.gyr(:,counter+1);
       end
       
       if  abs(meas.acc(:,counter+1)) < 1.2*abs(g0)                          %if outlier, no update
@@ -111,9 +114,10 @@ end
 %%   mag  
 % if ~all(isnan(meas.gyr)) 
 %       if isnan(meas.gyr(:,counter+1))                                           %no measurement
-%         [x, P] = tu_qw_no_measure(x, P, meas.gyr, T, Rw);
+%         [x, P] = tu_qw_no_measure(x, P, gyr_last_value, T, Rw);
 %       else
 %         [x, P] = tu_qw(x, P, meas.gyr(:,counter+1), T, Rw);                       %EKF pred
+%           gyr_last_value = meas.gyr(:,counter+1);
 %       end
 %       
 %       if  abs(meas.mag(:,counter+1)) < 1.2*abs(x)                               %if outlier, no update

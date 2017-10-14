@@ -4,6 +4,7 @@ clear
 load('rotationData.mat');
 load('noiseParameters_10_12_1min.mat');
 load('initData.mat');
+rotationData = initData;
 % parameters
 n = 4;
 K = length(rotationData.t);

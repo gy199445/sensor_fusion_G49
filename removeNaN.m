@@ -10,4 +10,3 @@ for i = 1:n
 end
 NaNRemoved = meas(:,validColIndex==1);
 end
-

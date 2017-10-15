@@ -27,7 +27,7 @@ import('com.liu.sensordata.*');  % Used to receive data.
 t0 = [];  % Initial time (initialize on first data received)
 nx = 4;   % Assuming that you use q as state variable.
 % Add your filter settings here.
-load('noiseParameters_with_g0.mat')
+load('noiseParameters_with_g0_m0.mat')
 % Current filter state.
 x = [1; 0; 0 ;0];
 P = eye(nx, nx);
@@ -101,8 +101,11 @@ try
             T = (t-t0)-tLast;
             Rw = (0.5*Sq(x)) * noiseParameters.gyrCov*(0.5*Sq(x))';
             [xPredict,PPredict] = tu_qw(x,P,gyr_kmin1,T,Rw);
-            [x, P] = ...
-                mu_g(xPredict, PPredict, acc, noiseParameters.accCov,noiseParameters.g0);
+            %[x, P] = ...
+                %mu_g(xPredict, PPredict, acc, noiseParameters.accCov,noiseParameters.g0);
+            [xUpdateMag, PUpdateMag] = ...
+                mu_g(xPredict, PPredict, mag, noiseParameters.magCov,noiseParameters.m0);
+            x = xUpdateMag; P=PUpdateMag;
         end
         % Visualize result
         if rem(counter, 10) == 0

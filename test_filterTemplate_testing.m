@@ -1,5 +1,6 @@
+close all
 [xhat, meas] = filterTemplate_testing();
-figure(1)
+figure(2)
 %reference orient
 refOrient = meas.orient;
 for i = 1:4

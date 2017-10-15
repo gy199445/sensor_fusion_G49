@@ -91,7 +91,7 @@ for i=27:totalLength % Repeat while data is available
         Rw = (0.5*Sq(x)) * noiseParameters.gyrCov*(0.5*Sq(x))';
         [xPredict,PPredict] = tu_qw(x,P,gyr_kmin1,T,Rw);
         [x, P] = ...
-            mu_g(xPredict, PPredict, acc, noiseParameters.accCov, noiseParameters.g0);
+            mu_g(xPredict, PPredict, acc, 0.1*noiseParameters.accCov, noiseParameters.g0);
     end
     
     %     % Visualize result

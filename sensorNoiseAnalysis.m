@@ -35,6 +35,9 @@ for i = 1:counter
     g(:,i) = linsolve(transpose(Qq(NaNRemoved.orient(:,i))),NaNRemoved.acc(:,i));
 end
 g0 = mean(g,2);
+%compute m0 (earth magnetic field)
+m0 = [0;sum(sqrt(NaNRemoved.mag(1,:).^2+NaNRemoved.mag(2,:).^2))/length(NaNRemoved.t);sum(NaNRemoved.mag(3,:)/length(NaNRemoved.t))];
 noiseParameters = struct('accMean',accMean,'accCov',cov(acc'),...
     'gyrMean',gyrMean,'gyrCov',cov(gyr'),...
-    'magMean',magMean,'magCov',cov(mag'),'g0',g0);
+    'magMean',magMean,'magCov',cov(mag'),'g0',g0,...
+    'm0',m0);

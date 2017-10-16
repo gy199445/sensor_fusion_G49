@@ -7,7 +7,7 @@ function [ xPredict,PPredict ] = tu_qw( xPrior,PPrior,omega,T,Rw )
 %   omega:  3*1 angular speed measurement \omega_{k-1}
 %   T:      1*1 time difference between omega_k and omega_k-1
 %   Rw:     4*4 process noise
-A = eye(4) + T*Somega(omega);
+A = eye(4) + 0.5*T*Somega(omega);
 xPredict = A*xPrior;
 PPredict = A*PPrior*A' + Rw;
 [xPredict,PPredict] = mu_normalizeQ(xPredict,PPredict);

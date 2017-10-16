@@ -12,4 +12,5 @@ K = P*H_J'*S^-1;
 x = x + K*(y - H*g0);
 P = P - K*S*K';
 
+[x, P] = mu_normalizeQ(x, P);   %normalize
 end

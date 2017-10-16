@@ -27,6 +27,7 @@ import('com.liu.sensordata.*');  % Used to receive data.
 t0 = [];  % Initial time (initialize on first data received)
 nx = 4;   % Assuming that you use q as state variable.
 % Add your filter settings here.
+%load('noiseParameters_with_g0_m0.mat')
 load('noiseParameters_with_g0_m0.mat')
 % Current filter state.
 x = [1; 0; 0 ;0];
@@ -92,6 +93,8 @@ try
             meas.gyr(:, end+1) = gyr;
             meas.mag(:, end+1) = mag;
             meas.orient(:, end+1) = orientation;
+            %assume the prior is exact
+            %x = orientation;
             counter = counter+1;
             continue;
         end
@@ -101,11 +104,16 @@ try
             T = (t-t0)-tLast;
             Rw = (0.5*Sq(x)) * noiseParameters.gyrCov*(0.5*Sq(x))';
             [xPredict,PPredict] = tu_qw(x,P,gyr_kmin1,T,Rw);
-            %[x, P] = ...
-                %mu_g(xPredict, PPredict, acc, noiseParameters.accCov,noiseParameters.g0);
+            [xUpdateAcc, PUpdateAcc] = ...
+                mu_g(xPredict, PPredict, acc, noiseParameters.accCov,noiseParameters.g0);
+                m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
             [xUpdateMag, PUpdateMag] = ...
-                mu_g(xPredict, PPredict, mag, noiseParameters.magCov,noiseParameters.m0);
+                mu_g(xUpdateAcc, PUpdateAcc, mag, noiseParameters.magCov,noiseParameters.m0);
             x = xUpdateMag; P=PUpdateMag;
+            %x = xUpdateAcc; P=PUpdateAcc;
+            %x = [xUpdateMag(1);xUpdateAcc(2);xUpdateAcc(2);xUpdateMag(1)];
+            %P = (PUpdateMag+PUpdateAcc)/2;
+            %[x,P] = mu_normalizeQ(x,P);
         end
         % Visualize result
         if rem(counter, 10) == 0

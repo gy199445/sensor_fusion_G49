@@ -1,5 +1,5 @@
 %test filterTemplate_testing_network.m
-[xhat,meas] = filterTemplate_testing_network();
+[xhat,meas] = filterTemplate_network();
 refOrient = meas.orient;
 for i = 1:4
     subplot(4,1,i);hold on;

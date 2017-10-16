@@ -28,7 +28,7 @@ t0 = [];  % Initial time (initialize on first data received)
 nx = 4;   % Assuming that you use q as state variable.
 % Add your filter settings here.
 %load('noiseParameters_with_g0_m0.mat')
-load('noiseParameters_with_g0_m0.mat')
+load('noiseParameters.mat')
 % Current filter state.
 x = [1; 0; 0 ;0];
 P = eye(nx, nx);
@@ -94,7 +94,7 @@ try
             meas.mag(:, end+1) = mag;
             meas.orient(:, end+1) = orientation;
             %assume the prior is exact
-            x = orientation;
+            %x = orientation;
             counter = counter+1;
             continue;
         end
@@ -108,12 +108,12 @@ try
                 mu_g(xPredict, PPredict, acc, noiseParameters.accCov,noiseParameters.g0);
                 m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
             [xUpdateMag, PUpdateMag] = ...
-                mu_g(xPredict, PPredict, mag, noiseParameters.magCov,noiseParameters.m0);
-            %x = xUpdateMag; P=PUpdateMag;
+                mu_g(xUpdateAcc, PUpdateAcc, mag, noiseParameters.magCov,noiseParameters.m0);
+            x = xUpdateMag; P=PUpdateMag;
             %x = xUpdateAcc; P=PUpdateAcc;
-            x = [xUpdateMag(1);xUpdateAcc(2);xUpdateAcc(2);xUpdateMag(1)];
-            P = (PUpdateMag+PUpdateAcc)/2;
-            [x,P] = mu_normalizeQ(x,P);
+            %x = [xUpdateMag(1);xUpdateAcc(2);xUpdateAcc(2);xUpdateMag(1)];
+            %P = (PUpdateMag+PUpdateAcc)/2;
+            %[x,P] = mu_normalizeQ(x,P);
         end
         % Visualize result
         if rem(counter, 10) == 0

@@ -1,7 +1,7 @@
-clear all
+%clear all
 %analysis the sensor noise
-%[~,meas] = filterTemplate();
-load('initData.mat')
+[~,initData] = filterTemplate();
+%load('initData.mat')
 %remove NAN
 K = size(initData.acc,2);
 n = size(initData.acc,1);
@@ -30,14 +30,23 @@ for i = 1:n
 end
 %compute g0
 NaNRemoved = removeNaN(initData);
-counter = length(NaNRemoved.t);
-for i = 1:counter
+T = length(NaNRemoved.t);
+for i = 1:T
     g(:,i) = linsolve(transpose(Qq(NaNRemoved.orient(:,i))),NaNRemoved.acc(:,i));
 end
 g0 = mean(g,2);
 %compute m0 (earth magnetic field)
-m0 = [0;sum(sqrt(NaNRemoved.mag(1,:).^2+NaNRemoved.mag(2,:).^2))/length(NaNRemoved.t);sum(NaNRemoved.mag(3,:)/length(NaNRemoved.t))];
+m0 = zeros(3,T);
+for i=1:T
+    m0(:,i) = [0 sqrt(NaNRemoved.mag(1,i)^2+NaNRemoved.mag(2,i)^2) NaNRemoved.mag(3,i)]';
+end
+figure(3)
+for i=1:3
+    subplot(3,1,i);hold on;
+    plot(NaNRemoved.t,m0(i,:),'b')
+end
+m0_averaged = [0;sum(sqrt(NaNRemoved.mag(1,:).^2+NaNRemoved.mag(2,:).^2))/T;sum(NaNRemoved.mag(3,:))/T];
 noiseParameters = struct('accMean',accMean,'accCov',cov(acc'),...
     'gyrMean',gyrMean,'gyrCov',cov(gyr'),...
     'magMean',magMean,'magCov',cov(mag'),'g0',g0,...
-    'm0',m0);
+    'm0',m0_averaged);

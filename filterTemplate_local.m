@@ -1,4 +1,4 @@
-function [xhat, meas] = filterTemplate_testing(calAcc, calGyr, calMag)
+function [xhat, meas] = filterTemplate_testing(mode,tuningFactor)
 % COPY OF FILTERTEMPLATE  Filter template
 % for testing our filter, use local data
 % This is a template function for how to collect and filter data
@@ -26,7 +26,7 @@ import('com.liu.sensordata.*');  % Used to receive data.
 t0 = [];  % Initial time (initialize on first data received)
 nx = 4;   % Assuming that you use q as state variable.
 % Add your filter settings here.
-load('noiseParameters_with_g0_m0.mat')
+load('initData_noiseParameters.mat')
 load('initData.mat')
 dataMatrix = dataStructToMatrix(initData);
 totalLength = size(dataMatrix,2);
@@ -86,40 +86,65 @@ for i=27:totalLength % Repeat while data is available
     if i>=28 %filtering
         tLast = xhat.t(end);%last time instance when all data is available
         gyr_kmin1 = meas.gyr(:,end);
-        T = t-tLast;
-        %process noise
+        T = (t-t0)-tLast;
         Rw = (0.5*Sq(x)) * noiseParameters.gyrCov*(0.5*Sq(x))';
-        [xPredict,PPredict] = tu_qw(x,P,gyr_kmin1,T,Rw);
+        [xPredict,PPredict] = tu_qw(x,P,tuningFactor(1)*gyr_kmin1,T,Rw);
         [xUpdateAcc, PUpdateAcc] = ...
-            mu_g(xPredict, PPredict, acc, noiseParameters.accCov,noiseParameters.g0);
-        m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
-        [xUpdateMag, PUpdateMag] = ...
-            mu_g(xPredict, PPredict, mag, 0.5*noiseParameters.magCov,m0);
-        x = xUpdateMag; P=PUpdateMag;
+            mu_g(xPredict, PPredict, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
+        switch mode
+            case 1
+                x = xUpdateAcc; P=PUpdateAcc;
+            case 2
+                [xUpdateMag, PUpdateMag] = ...
+                    mu_g(xPredict, PPredict, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
+                x = xUpdateMag; P = PUpdateMag;
+            case 3
+                m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
+                [xUpdateMag, PUpdateMag] = ...
+                    mu_g(xPredict, PPredict, mag, tuningFactor(3)*noiseParameters.magCov,m0);
+                x = xUpdateMag; P = PUpdateMag;
+            case 4
+                [xUpdateMag, PUpdateMag] = ...
+                    mu_g(xUpdateAcc, PUpdateAcc, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
+                x = xUpdateMag; P = PUpdateMag;
+            case 5
+                m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
+                [xUpdateMag, PUpdateMag] = ...
+                    mu_g(xUpdateAcc, PUpdateAcc, mag, tuningFactor(3)*noiseParameters.magCov,m0);
+                x = xUpdateMag; P = PUpdateMag;
+            case 6
+                m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
+                [xUpdateMag, PUpdateMag] = ...
+                    mu_g(xPredict,PPredict, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
+                [xUpdateAcc, PUpdateAcc] = ...
+                    mu_g(xUpdateMag, PUpdateMag, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
+                x = xUpdateAcc; P = PUpdateAcc;
+            otherwise
+                error('invalid mode')
+        end
+        
+        %     % Visualize result
+        %     setOrientation(ownView, x(1:4));
+        %     title(ownView, 'OWN', 'FontSize', 16);
+        %     if ~any(isnan(orientation))
+        %         if isempty(googleView)
+        %             subplot(1, 2, 2);
+        %             % Used for visualization.
+        %             googleView = OrientationView('Google filter', gca);
+        %         end
+        %         setOrientation(googleView, orientation);
+        %         title(googleView, 'GOOGLE', 'FontSize', 16);
+        %     end
+        
+        % Save estimates
+        xhat.x(:, end+1) = x;
+        xhat.P(:, :, end+1) = P;
+        xhat.t(end+1) = t - t0;
+        
+        meas.t(end+1) = t - t0;
+        meas.acc(:, end+1) = acc;
+        meas.gyr(:, end+1) = gyr;
+        meas.mag(:, end+1) = mag;
+        meas.orient(:, end+1) = orientation;
     end
-    
-    %     % Visualize result
-    %     setOrientation(ownView, x(1:4));
-    %     title(ownView, 'OWN', 'FontSize', 16);
-    %     if ~any(isnan(orientation))
-    %         if isempty(googleView)
-    %             subplot(1, 2, 2);
-    %             % Used for visualization.
-    %             googleView = OrientationView('Google filter', gca);
-    %         end
-    %         setOrientation(googleView, orientation);
-    %         title(googleView, 'GOOGLE', 'FontSize', 16);
-    %     end
-    
-    % Save estimates
-    xhat.x(:, end+1) = x;
-    xhat.P(:, :, end+1) = P;
-    xhat.t(end+1) = t - t0;
-    
-    meas.t(end+1) = t - t0;
-    meas.acc(:, end+1) = acc;
-    meas.gyr(:, end+1) = gyr;
-    meas.mag(:, end+1) = mag;
-    meas.orient(:, end+1) = orientation;
-end
 end

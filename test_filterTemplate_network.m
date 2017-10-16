@@ -1,9 +1,10 @@
 %test filterTemplate_testing_network.m
 % mode: 1:gyr+acc;2:gyr+mag(m0 fixed);3:gyr+mag(m0
-% changing);4:gyr+acc+mag(m0 fixed);5:gyr+acc+mag(m0 changing)
+% changing);4:gyr+acc+mag(m0 fixed);5:gyr+acc+mag(m0 changing);6:gyr+mag(m0
+% changing)+acc
 % tuningFactor 3*1, will be multiplied by Rw,Ra,Rm
-mode = 3;
-tuningFactor = [1 1 100]';
+mode = 4;
+tuningFactor = [1 0.1 1]';
 [xhat,meas] = filterTemplate_network(mode,tuningFactor);
 refOrient = meas.orient;
 for i = 1:4

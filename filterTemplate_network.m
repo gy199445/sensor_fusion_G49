@@ -20,7 +20,8 @@ function [xhat, meas] = filterTemplate(mode,tuningFactor)
 %
 % Note that it is not necessary to provide inputs (calAcc, calGyr, calMag).
 % mode: 1:gyr+acc;2:gyr+mag(m0 fixed);3:gyr+mag(m0
-% changing);4:gyr+acc+mag(m0 fixed);5:gyr+acc+mag(m0 changing)
+% changing);4:gyr+acc+mag(m0 fixed);5:gyr+acc+mag(m0 changing);6:gyr+mag(m0
+% changing)+acc
 % tuningFactor 3*1, will be multiplied by Rw,Ra,Rm
 %% Setup necessary infrastructure
 import('com.liu.sensordata.*');  % Used to receive data.
@@ -30,7 +31,7 @@ t0 = [];  % Initial time (initialize on first data received)
 nx = 4;   % Assuming that you use q as state variable.
 % Add your filter settings here.
 %load('noiseParameters_with_g0_m0.mat')
-load('noiseParameters.mat')
+load('measured_now_noiseParameters.mat');
 % Current filter state.
 x = [1; 0; 0 ;0];
 P = eye(nx, nx);
@@ -96,7 +97,7 @@ try
             meas.mag(:, end+1) = mag;
             meas.orient(:, end+1) = orientation;
             %assume the prior is exact
-            x = orientation;
+            %x = orientation;
             counter = counter+1;
             continue;
         end
@@ -129,6 +130,13 @@ try
                     [xUpdateMag, PUpdateMag] = ...
                         mu_g(xUpdateAcc, PUpdateAcc, mag, tuningFactor(3)*noiseParameters.magCov,m0);
                     x = xUpdateMag; P = PUpdateMag;
+                case 6
+                    m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
+                    [xUpdateMag, PUpdateMag] = ...
+                        mu_g(xPredict,PPredict, mag, tuningFactor(3)*noiseParameters.magCov,m0);
+                    [xUpdateAcc, PUpdateAcc] = ...
+                        mu_g(xUpdateMag, PUpdateMag, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
+                    x = xUpdateAcc; P = PUpdateAcc;
                 otherwise
                     error('invalid mode')
             end

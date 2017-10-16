@@ -1,4 +1,4 @@
-function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
+function [xhat, meas] = filterTemplate(mode,tuningFactor)
 % FILTERTEMPLATE  Filter template
 %
 % This is a template function for how to collect and filter data
@@ -19,7 +19,9 @@ function [xhat, meas] = filterTemplate(calAcc, calGyr, calMag)
 % separate view.
 %
 % Note that it is not necessary to provide inputs (calAcc, calGyr, calMag).
-
+% mode: 1:gyr+acc;2:gyr+mag(m0 fixed);3:gyr+mag(m0
+% changing);4:gyr+acc+mag(m0 fixed);5:gyr+acc+mag(m0 changing)
+% tuningFactor 3*1, will be multiplied by Rw,Ra,Rm
 %% Setup necessary infrastructure
 import('com.liu.sensordata.*');  % Used to receive data.
 
@@ -81,9 +83,9 @@ try
         mag = data(1, 8:10)';
         orientation = data(1, 18:21)';  % Google's orientation estimate.
         if counter == 0
-        % intialize filter
-        % Save estimates instead of filtering because measurement not
-        % available            
+            % intialize filter
+            % Save estimates instead of filtering because measurement not
+            % available
             xhat.x(:, end+1) = x;
             xhat.P(:, :, end+1) = P;
             xhat.t(end+1) = t - t0;
@@ -94,7 +96,7 @@ try
             meas.mag(:, end+1) = mag;
             meas.orient(:, end+1) = orientation;
             %assume the prior is exact
-            %x = orientation;
+            x = orientation;
             counter = counter+1;
             continue;
         end
@@ -103,13 +105,33 @@ try
             gyr_kmin1 = meas.gyr(:,end);
             T = (t-t0)-tLast;
             Rw = (0.5*Sq(x)) * noiseParameters.gyrCov*(0.5*Sq(x))';
-            [xPredict,PPredict] = tu_qw(x,P,gyr_kmin1,T,Rw);
+            [xPredict,PPredict] = tu_qw(x,P,tuningFactor(1)*gyr_kmin1,T,Rw);
             [xUpdateAcc, PUpdateAcc] = ...
-                mu_g(xPredict, PPredict, acc, noiseParameters.accCov,noiseParameters.g0);
-                m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
-            [xUpdateMag, PUpdateMag] = ...
-                mu_g(xUpdateAcc, PUpdateAcc, mag, noiseParameters.magCov,noiseParameters.m0);
-            x = xUpdateMag; P=PUpdateMag;
+                mu_g(xPredict, PPredict, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
+            switch mode
+                case 1
+                    x = xUpdateAcc; P=PUpdateAcc;
+                case 2
+                    [xUpdateMag, PUpdateMag] = ...
+                        mu_g(xPredict, PPredict, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
+                    x = xUpdateMag; P = PUpdateMag;
+                case 3
+                    m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
+                    [xUpdateMag, PUpdateMag] = ...
+                        mu_g(xPredict, PPredict, mag, tuningFactor(3)*noiseParameters.magCov,m0);
+                    x = xUpdateMag; P = PUpdateMag;
+                case 4
+                    [xUpdateMag, PUpdateMag] = ...
+                        mu_g(xUpdateAcc, PUpdateAcc, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
+                    x = xUpdateMag; P = PUpdateMag;
+                case 5
+                    m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
+                    [xUpdateMag, PUpdateMag] = ...
+                        mu_g(xUpdateAcc, PUpdateAcc, mag, tuningFactor(3)*noiseParameters.magCov,m0);
+                    x = xUpdateMag; P = PUpdateMag;
+                otherwise
+                    error('invalid mode')
+            end
             %x = xUpdateAcc; P=PUpdateAcc;
             %x = [xUpdateMag(1);xUpdateAcc(2);xUpdateAcc(2);xUpdateMag(1)];
             %P = (PUpdateMag+PUpdateAcc)/2;
@@ -143,7 +165,8 @@ try
         meas.orient(:, end+1) = orientation;
     end
 catch e
-    fprintf(['Unsuccessful connecting to client!\n' ...
+    fprintf(e.message);
+    fprintf(['\nUnsuccessful connecting to client!\n' ...
         'Make sure to start streaming from the phone *after*'...
         'running this function!']);
 end

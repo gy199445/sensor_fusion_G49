@@ -19,7 +19,7 @@ function [xhat, meas] = filterTemplate(mode,tuningFactor)
 % separate view.
 %
 % Note that it is not necessary to provide inputs (calAcc, calGyr, calMag).
-% mode: 1:gyr+acc;2:gyr+mag(m0 fixed);3:gyr+acc+mag(m0 fixed);
+% mode: 1:gyr+acc;2:gyr+mag(m0 fixed);3:gyr+acc+mag(m0 fixed);4:gyr only
 % tuningFactor 3*1, will be multiplied by Rw,Ra,Rm
 %% Setup necessary infrastructure
 import('com.liu.sensordata.*');  % Used to receive data.
@@ -29,11 +29,12 @@ t0 = [];  % Initial time (initialize on first data received)
 nx = 4;   % Assuming that you use q as state variable.
 % Add your filter settings here.
 %load('noiseParameters_with_g0_m0.mat')
-load('measured_now_noiseParameters.mat');
+load('noiseParameters.mat');
 % Current filter state.
 x = [1; 0; 0 ;0];
 P = eye(nx, nx);
-
+Lk = 0;%expected magnetic field
+alpha_Lk = 0.1;
 % Saved filter states.
 xhat = struct('t', zeros(1, 0),...
     'x', zeros(nx, 0),...
@@ -43,7 +44,8 @@ meas = struct('t', zeros(1, 0),...
     'acc', zeros(3, 0),...
     'gyr', zeros(3, 0),...
     'mag', zeros(3, 0),...
-    'orient', zeros(4, 0));
+    'orient', zeros(4, 0),...
+    'Lk',zeros(1,0));
 try
     %% Create data link
     server = StreamSensorDataReader(3400);
@@ -97,10 +99,13 @@ try
             %assume the prior is exact
             %x = orientation;
             counter = counter+1;
+            Lk = (1-alpha_Lk)*Lk + alpha_Lk*norm(mag);
+            meas.Lk(end+1) = Lk;
             continue;
         end
         if counter>=1%filtering
             tLast = xhat.t(end);%last time instance when all data is available
+            Lk = (1-alpha_Lk)*Lk + alpha_Lk*norm(mag);
             gyr_kmin1 = meas.gyr(:,end);
             T = (t-t0)-tLast;
             Rw = (0.5*Sq(x)) * noiseParameters.gyrCov*(0.5*Sq(x))';
@@ -108,7 +113,7 @@ try
             switch mode
                 case 1
                     %outlier rejection
-                    if(abs(norm(acc)-norm(noiseParameters.g0))<2)
+                    if(abs(norm(acc)-norm(noiseParameters.g0))<0.5)
                         [xUpdateAcc, PUpdateAcc] = ...
                             mu_g(xPredict, PPredict, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
                         x = xUpdateAcc; P=PUpdateAcc;
@@ -127,20 +132,17 @@ try
                         ownView.setMagDist(1)
                     end
                 case 3
-                    if(abs(norm(acc)-norm(noiseParameters.g0))<2||abs(norm(mag)-norm(noiseParameters.m0))<10)
+                    if(Lk-55<10)
                         [xUpdateAcc, PUpdateAcc] = ...
                             mu_g(xPredict, PPredict, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
                         [xUpdateMag, PUpdateMag] = ...
                             mu_g(xUpdateAcc, PUpdateAcc, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
                         x = xUpdateMag; P = PUpdateMag;
                     else
-                        if(abs(norm(acc)-norm(noiseParameters.g0))>2)
-                            ownView.setAccDist(1)
-                        end
-                        if(abs(norm(mag)-norm(noiseParameters.m0))>10)
-                            ownView.setMagDist(1)
-                        end
+                        ownView.setMagDist(1)
                     end
+                case 4
+                   x = xPredict;P=PPredict; 
                 otherwise
                     error('invalid mode')
             end
@@ -175,6 +177,7 @@ try
         meas.gyr(:, end+1) = gyr;
         meas.mag(:, end+1) = mag;
         meas.orient(:, end+1) = orientation;
+        meas.Lk(end+1) = Lk;
         %reset outlier indicator
         ownView.setMagDist(0)
         ownView.setAccDist(0)

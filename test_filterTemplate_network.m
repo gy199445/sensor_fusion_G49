@@ -30,12 +30,6 @@ for i=1:3
     plot(xhat.t,m0(i,:),'b')
 end
 %magnetic outlier detection test
-for i = 1:T
-    normMagDiff(i) = abs(norm(meas.mag(:,i)-noiseParameters.m0));
-end
-figure(4)
-plot(normMagDiff)
-title('normMagDiff')
 figure(5)
 plot(meas.Lk)
 title('Lk')

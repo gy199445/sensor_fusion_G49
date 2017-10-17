@@ -19,9 +19,7 @@ function [xhat, meas] = filterTemplate(mode,tuningFactor)
 % separate view.
 %
 % Note that it is not necessary to provide inputs (calAcc, calGyr, calMag).
-% mode: 1:gyr+acc;2:gyr+mag(m0 fixed);3:gyr+mag(m0
-% changing);4:gyr+acc+mag(m0 fixed);5:gyr+acc+mag(m0 changing);6:gyr+mag(m0
-% changing)+acc
+% mode: 1:gyr+acc;2:gyr+mag(m0 fixed);3:gyr+acc+mag(m0 fixed);
 % tuningFactor 3*1, will be multiplied by Rw,Ra,Rm
 %% Setup necessary infrastructure
 import('com.liu.sensordata.*');  % Used to receive data.
@@ -107,36 +105,42 @@ try
             T = (t-t0)-tLast;
             Rw = (0.5*Sq(x)) * noiseParameters.gyrCov*(0.5*Sq(x))';
             [xPredict,PPredict] = tu_qw(x,P,tuningFactor(1)*gyr_kmin1,T,Rw);
-            [xUpdateAcc, PUpdateAcc] = ...
-                mu_g(xPredict, PPredict, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
             switch mode
                 case 1
-                    x = xUpdateAcc; P=PUpdateAcc;
+                    %outlier rejection
+                    if(abs(norm(acc)-norm(noiseParameters.g0))<2)
+                        [xUpdateAcc, PUpdateAcc] = ...
+                            mu_g(xPredict, PPredict, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
+                        x = xUpdateAcc; P=PUpdateAcc;
+                    else
+                        %outlier detected
+                        ownView.setAccDist(1)
+                    end
                 case 2
-                    [xUpdateMag, PUpdateMag] = ...
-                        mu_g(xPredict, PPredict, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
-                    x = xUpdateMag; P = PUpdateMag;
+                    %outlier rejection
+                    if(abs(norm(mag)-norm(noiseParameters.m0))<10)
+                        [xUpdateMag, PUpdateMag] = ...
+                            mu_g(xPredict, PPredict, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
+                        x = xUpdateMag; P = PUpdateMag;
+                    else
+                        %outlier detected
+                        ownView.setMagDist(1)
+                    end
                 case 3
-                    m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
-                    [xUpdateMag, PUpdateMag] = ...
-                        mu_g(xPredict, PPredict, mag, tuningFactor(3)*noiseParameters.magCov,m0);
-                    x = xUpdateMag; P = PUpdateMag;
-                case 4
-                    [xUpdateMag, PUpdateMag] = ...
-                        mu_g(xUpdateAcc, PUpdateAcc, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
-                    x = xUpdateMag; P = PUpdateMag;
-                case 5
-                    m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
-                    [xUpdateMag, PUpdateMag] = ...
-                        mu_g(xUpdateAcc, PUpdateAcc, mag, tuningFactor(3)*noiseParameters.magCov,m0);
-                    x = xUpdateMag; P = PUpdateMag;
-                case 6
-                    m0 = [0 sqrt(mag(1)^2+mag(2)^2) mag(3)]';
-                    [xUpdateMag, PUpdateMag] = ...
-                        mu_g(xPredict,PPredict, mag, tuningFactor(3)*noiseParameters.magCov,m0);
-                    [xUpdateAcc, PUpdateAcc] = ...
-                        mu_g(xUpdateMag, PUpdateMag, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
-                    x = xUpdateAcc; P = PUpdateAcc;
+                    if(abs(norm(acc)-norm(noiseParameters.g0))<2||abs(norm(mag)-norm(noiseParameters.m0))<10)
+                        [xUpdateAcc, PUpdateAcc] = ...
+                            mu_g(xPredict, PPredict, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
+                        [xUpdateMag, PUpdateMag] = ...
+                            mu_g(xUpdateAcc, PUpdateAcc, mag, tuningFactor(3)*noiseParameters.magCov,noiseParameters.m0);
+                        x = xUpdateMag; P = PUpdateMag;
+                    else
+                        if(abs(norm(acc)-norm(noiseParameters.g0))>2)
+                            ownView.setAccDist(1)
+                        end
+                        if(abs(norm(mag)-norm(noiseParameters.m0))>10)
+                            ownView.setMagDist(1)
+                        end
+                    end
                 otherwise
                     error('invalid mode')
             end
@@ -171,6 +175,9 @@ try
         meas.gyr(:, end+1) = gyr;
         meas.mag(:, end+1) = mag;
         meas.orient(:, end+1) = orientation;
+        %reset outlier indicator
+        ownView.setMagDist(0)
+        ownView.setAccDist(0)
     end
 catch e
     fprintf(e.message);

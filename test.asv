@@ -12,14 +12,14 @@ meas.gyr(:,find(isnan(meas.gyr(1,:)))) = meas.gyr(:,find(isnan(meas.gyr(1,:)))-1
 meas.mag(:,find(isnan(meas.mag(1,:)))) = meas.mag(:,find(isnan(meas.mag(1,:)))-1);
 nx = 4; 
   x = [1; 0; 0 ;0]; 
-  P = 0.5*eye(nx, nx);
-
+  P = 1*eye(nx, nx);
+  x = [1; 0; 0 ;0;0;0;0]; 
+  P = 1*eye(7);
 
     Rw = 1 * [0.2013   -0.0157    0.0220; -0.0157    0.1431   -0.0049; 0.0220   -0.0049    0.1396];           %cov
     Ra =  1*[0.1349   -0.0585   -0.0774; -0.0585    0.1177    0.0585; -0.0774    0.0585    0.1612];
     Rm = 1*[0.2283    0.1386    0.1489; 0.1386    0.1180    0.1250; 0.1489    0.1250    0.1949];
     Ralpha = 2*eye(3);
-    Rq = 0.1*eye(4);
 % Rw = 1*noiseParameters.gyrCov;
 % Ra = 1*noiseParameters.accCov;
 % Rm = 1*noiseParameters.magCov;
@@ -46,9 +46,8 @@ if ~all(isnan(meas.gyr))                                                        
         [x, P] = tu_qw_no_measure(x, P, meas.gyr, T, Rw);
         x_1(:,counter+1) = x;
       else
-        [x, P] = tu_qw(x, P, meas.gyr(:,counter+1), T, Rw);                       %EKF pred
-%          [x, P] = tu_qw_no_measure(x, P, meas.gyr, T, Rw);
-%          [x, P] = simple_model(x, P, T, Rq);
+%         [x, P] = tu_qw(x, P, meas.gyr(:,counter+1), T, Rw);                       %EKF pred
+         [x, P] = tu_qw_no_measure(x, P, meas.gyr, T, Rw);
         x_1(:,counter+1) = x;
       end
       

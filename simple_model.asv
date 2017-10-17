@@ -1,9 +1,4 @@
-function [x, P] = tu_qw(x, P, omega, T, Rw)
-%   x:prior
-%   P:prior conv
-%   omega: angular speed measurement
-%   T:sample time
-%   Rw:process noise
+function [x, P] = simple_model(x, P, T, Ralpha)
 
 Sw = Somega (omega);
 Gq = Sq(x);

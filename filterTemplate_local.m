@@ -26,8 +26,9 @@ import('com.liu.sensordata.*');  % Used to receive data.
 t0 = [];  % Initial time (initialize on first data received)
 nx = 4;   % Assuming that you use q as state variable.
 % Add your filter settings here.
-load('initData_noiseParameters.mat')
-load('initData.mat')
+load('measured_now_noiseParameters.mat')
+load('trainingData.mat')
+initData = traningData;
 dataMatrix = dataStructToMatrix(initData);
 totalLength = size(dataMatrix,2);
 % Current filter state.
@@ -81,6 +82,8 @@ for i=27:totalLength % Repeat while data is available
         meas.gyr(:, end+1) = gyr;
         meas.mag(:, end+1) = mag;
         meas.orient(:, end+1) = orientation;
+        %known prior
+        x = orientation;
         continue;
     end
     if i>=28 %filtering
@@ -88,7 +91,7 @@ for i=27:totalLength % Repeat while data is available
         gyr_kmin1 = meas.gyr(:,end);
         T = (t-t0)-tLast;
         Rw = (0.5*Sq(x)) * noiseParameters.gyrCov*(0.5*Sq(x))';
-        [xPredict,PPredict] = tu_qw(x,P,tuningFactor(1)*gyr_kmin1,T,Rw);
+        [xPredict,PPredict] = tu_qw(x,P,gyr_kmin1,T,tuningFactor(1)*Rw);
         [xUpdateAcc, PUpdateAcc] = ...
             mu_g(xPredict, PPredict, acc, tuningFactor(2)*noiseParameters.accCov,noiseParameters.g0);
         switch mode
